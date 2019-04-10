@@ -29,17 +29,13 @@ def expmap2rotmat(r):
 def rotmat2expmap(R):
     """
     :param R: Rotation matrix, Nx3x3
-    :return: r: Axis-angle, Nx3
+    :return: r: Rotation vector, Nx3
     """
     assert R.shape[1] == R.shape[2] == 3
-    x = (R - R.permute(0, 2, 1))/2.
-    x = x.contiguous().view(-1, 9)
-    sintheta_r = x[:, [7, 2, 3]]
-    sintheta = torch.sqrt(torch.sum(torch.pow(sintheta_r, 2), 1, keepdim=True))
-    r_norm = sintheta_r / (sintheta+EPS)
-    theta = torch.asin(torch.clamp(sintheta, min=-1., max=1.))
-    r = theta * r_norm
-    return r
+    theta = torch.acos(torch.clamp((R[:, 0, 0] + R[:, 1, 1] + R[:, 2, 2] - 1) / 2, min=-1., max=1.)).view(-1, 1)
+    r = torch.stack((R[:, 2, 1]-R[:, 1, 2], R[:, 0, 2]-R[:, 2, 0], R[:, 1, 0]-R[:, 0, 1]), 1) / (2*torch.sin(theta))
+    r_norm = r / torch.sqrt(torch.sum(torch.pow(r, 2), 1, keepdim=True))
+    return theta * r_norm
 
 
 def quat2expmap(q):
